@@ -1,6 +1,7 @@
 {
-  "name": "",
-  "description": "",
+  "name": "Calculator",
+  "description": "A sleek, modern and intuitive calculator app with standard arithmetic, scientific functions, calculation history, and smooth animations.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
+
