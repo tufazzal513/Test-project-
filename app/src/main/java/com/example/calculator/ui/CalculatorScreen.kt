@@ -14,18 +14,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
-import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -53,7 +52,7 @@ fun CalculatorScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
             // Top Controls Bar
             TopBarControls(
@@ -69,33 +68,31 @@ fun CalculatorScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Display Output Area
+            // Display Output Area with modern card layout
             CalculatorDisplay(
                 state = state,
                 onBackspace = { viewModel.onBackspaceClick() },
                 onClear = { viewModel.onClearAll() }
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Scientific panel (collapsible)
+            // Scientific panel (collapsible with smooth animation)
             AnimatedVisibility(
                 visible = state.isScientificExpanded,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
+                enter = expandVertically(spring(dampingRatio = 0.8f)) + fadeIn(),
+                exit = shrinkVertically(spring(dampingRatio = 0.8f)) + fadeOut()
             ) {
-                ScientificKeypad(
-                    onFunction = { viewModel.onFunctionClick(it) },
-                    onConstant = { viewModel.onConstantClick(it) },
-                    onPower = { viewModel.onPowerClick() },
-                    onSqrt = { viewModel.onSqrtClick() },
-                    onFactorial = { viewModel.onFactorialClick() },
-                    onParenthesis = { viewModel.onParenthesisClick() }
-                )
-            }
-
-            if (state.isScientificExpanded) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Column {
+                    ScientificKeypad(
+                        onFunction = { viewModel.onFunctionClick(it) },
+                        onConstant = { viewModel.onConstantClick(it) },
+                        onPower = { viewModel.onPowerClick() },
+                        onSqrt = { viewModel.onSqrtClick() },
+                        onFactorial = { viewModel.onFactorialClick() }
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
             }
 
             // Main Keypad Grid
@@ -135,99 +132,92 @@ private fun TopBarControls(
     onMemoryAdd: () -> Unit,
     onMemorySubtract: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f),
+        tonalElevation = 1.dp,
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Angle mode badge button
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable { onToggleAngle() }
-                    .testTag("angle_mode_button")
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = state.angleMode.name,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                )
+                // Angle mode badge
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onToggleAngle() }
+                        .testTag("angle_mode_button")
+                ) {
+                    Text(
+                        text = state.angleMode.name,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                    )
+                }
+
+                // Memory pills
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    SmallPillButton(text = "MC", enabled = state.hasMemory, onClick = onMemoryClear, testTag = "mem_clear_btn")
+                    SmallPillButton(text = "MR", enabled = state.hasMemory, onClick = onMemoryRecall, testTag = "mem_recall_btn")
+                    SmallPillButton(text = "M+", enabled = true, onClick = onMemoryAdd, testTag = "mem_add_btn")
+                    SmallPillButton(text = "M−", enabled = true, onClick = onMemorySubtract, testTag = "mem_sub_btn")
+                }
             }
 
-            // Memory indicators and buttons
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                SmallPillButton(
-                    text = "MC",
-                    enabled = state.hasMemory,
-                    onClick = onMemoryClear,
-                    testTag = "mem_clear_btn"
-                )
-                SmallPillButton(
-                    text = "MR",
-                    enabled = state.hasMemory,
-                    onClick = onMemoryRecall,
-                    testTag = "mem_recall_btn"
-                )
-                SmallPillButton(
-                    text = "M+",
-                    enabled = true,
-                    onClick = onMemoryAdd,
-                    testTag = "mem_add_btn"
-                )
-                SmallPillButton(
-                    text = "M−",
-                    enabled = true,
-                    onClick = onMemorySubtract,
-                    testTag = "mem_sub_btn"
-                )
-            }
-        }
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Scientific mode toggle
-            IconButton(
-                onClick = onToggleScientific,
-                modifier = Modifier.testTag("toggle_scientific_button")
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = if (state.isScientificExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                    contentDescription = "Toggle Scientific Keypad",
-                    tint = if (state.isScientificExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // History button
-            IconButton(
-                onClick = onToggleHistory,
-                modifier = Modifier.testTag("history_button")
-            ) {
-                BadgedBox(
-                    badge = {
-                        if (state.history.isNotEmpty()) {
-                            Badge(containerColor = MaterialTheme.colorScheme.primary) {
-                                Text(state.history.size.toString())
-                            }
-                        }
-                    }
+                // Scientific mode toggle button
+                IconButton(
+                    onClick = onToggleScientific,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .testTag("toggle_scientific_button")
                 ) {
                     Icon(
-                        imageVector = Icons.Default.History,
-                        contentDescription = "Calculation History",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        imageVector = Icons.Default.Science,
+                        contentDescription = "Toggle Scientific Keypad",
+                        tint = if (state.isScientificExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
                     )
+                }
+
+                // History button
+                IconButton(
+                    onClick = onToggleHistory,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .testTag("history_button")
+                ) {
+                    BadgedBox(
+                        badge = {
+                            if (state.history.isNotEmpty()) {
+                                Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                                    Text(state.history.size.toString())
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.History,
+                            contentDescription = "Calculation History",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }
@@ -242,19 +232,19 @@ private fun SmallPillButton(
     testTag: String
 ) {
     Surface(
-        shape = RoundedCornerShape(6.dp),
-        color = if (enabled) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+        shape = RoundedCornerShape(8.dp),
+        color = if (enabled) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
         modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
+            .clip(RoundedCornerShape(8.dp))
             .clickable(enabled = enabled, onClick = onClick)
             .testTag(testTag)
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+            fontWeight = FontWeight.Bold,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 5.dp)
         )
     }
 }
@@ -267,68 +257,93 @@ private fun CalculatorDisplay(
 ) {
     val scrollState = rememberScrollState()
 
-    // Auto scroll to end on expression change
     LaunchedEffect(state.expression) {
         scrollState.animateScrollTo(scrollState.maxValue)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp),
-        horizontalAlignment = Alignment.End
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        // Expression Row
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(scrollState),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.End
         ) {
-            Text(
-                text = if (state.expression.isEmpty()) "0" else state.expression,
-                fontSize = if (state.expression.length > 12) 34.sp else 46.sp,
-                fontWeight = FontWeight.Light,
-                fontFamily = FontFamily.SansSerif,
-                color = if (state.expression.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.End,
-                maxLines = 1,
-                modifier = Modifier.testTag("calculator_expression_display")
-            )
-        }
+            // Expression Scrollable Line
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(scrollState),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (state.expression.isEmpty()) "0" else state.expression,
+                    fontSize = if (state.expression.length > 12) 36.sp else 48.sp,
+                    fontWeight = FontWeight.Normal,
+                    fontFamily = FontFamily.SansSerif,
+                    color = if (state.expression.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f) else MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.End,
+                    maxLines = 1,
+                    modifier = Modifier.testTag("calculator_expression_display")
+                )
+            }
 
-        Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-        // Result preview or Error message row
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(36.dp),
-            contentAlignment = Alignment.CenterEnd
-        ) {
-            if (state.error != null) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f)
-                ) {
+            // Preview Result or Error display
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(38.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Backspace button inside display for quick editing
+                if (state.expression.isNotEmpty()) {
+                    IconButton(
+                        onClick = onBackspace,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .testTag("display_backspace_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Backspace,
+                            contentDescription = "Backspace",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.width(36.dp))
+                }
+
+                if (state.error != null) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.errorContainer
+                    ) {
+                        Text(
+                            text = state.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                } else if (state.previewResult.isNotEmpty()) {
                     Text(
-                        text = state.error,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        fontWeight = FontWeight.Medium
+                        text = state.previewResult,
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.testTag("calculator_preview_display")
                     )
                 }
-            } else if (state.previewResult.isNotEmpty()) {
-                Text(
-                    text = state.previewResult,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.testTag("calculator_preview_display")
-                )
             }
         }
     }
@@ -340,22 +355,21 @@ private fun ScientificKeypad(
     onConstant: (String) -> Unit,
     onPower: () -> Unit,
     onSqrt: () -> Unit,
-    onFactorial: () -> Unit,
-    onParenthesis: () -> Unit
+    onFactorial: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Row 1: sin, cos, tan, ln, log
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ScientificButton("sin", onClick = { onFunction("sin") }, modifier = Modifier.weight(1f))
                 ScientificButton("cos", onClick = { onFunction("cos") }, modifier = Modifier.weight(1f))
@@ -364,10 +378,10 @@ private fun ScientificKeypad(
                 ScientificButton("log", onClick = { onFunction("log") }, modifier = Modifier.weight(1f))
             }
 
-            // Row 2: √, x^y, n!, π, e
+            // Row 2: √, xʸ, n!, π, e
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ScientificButton("√", onClick = onSqrt, modifier = Modifier.weight(1f))
                 ScientificButton("xʸ", onClick = onPower, modifier = Modifier.weight(1f))
@@ -388,18 +402,18 @@ private fun ScientificButton(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.94f else 1.0f,
+        targetValue = if (isPressed) 0.92f else 1.0f,
         animationSpec = spring(),
-        label = "sci_btn_scale"
+        label = "sci_scale"
     )
 
     Surface(
-        shape = RoundedCornerShape(10.dp),
-        color = if (isPressed) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(12.dp),
+        color = if (isPressed) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface,
         modifier = modifier
-            .height(42.dp)
+            .height(44.dp)
             .scale(scale)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(12.dp))
             .clickable(interactionSource = interactionSource, indication = ripple()) { onClick() }
             .testTag("sci_btn_$text")
     ) {
@@ -407,7 +421,7 @@ private fun ScientificButton(
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
         }
@@ -427,7 +441,7 @@ private fun StandardKeypad(
     onParenthesis: () -> Unit,
     onEquals: () -> Unit
 ) {
-    val spacing = 10.dp
+    val spacing = 12.dp
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -438,34 +452,10 @@ private fun StandardKeypad(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(spacing)
         ) {
-            KeypadButton(
-                text = "C",
-                type = ButtonType.Action,
-                modifier = Modifier.weight(1f),
-                onClick = onClearAll,
-                testTag = "calc_btn_clear"
-            )
-            KeypadButton(
-                text = "( )",
-                type = ButtonType.Action,
-                modifier = Modifier.weight(1f),
-                onClick = onParenthesis,
-                testTag = "calc_btn_parenthesis"
-            )
-            KeypadButton(
-                text = "%",
-                type = ButtonType.Action,
-                modifier = Modifier.weight(1f),
-                onClick = onPercent,
-                testTag = "calc_btn_percent"
-            )
-            KeypadButton(
-                text = "÷",
-                type = ButtonType.Operator,
-                modifier = Modifier.weight(1f),
-                onClick = { onOperator("÷") },
-                testTag = "calc_btn_div"
-            )
+            KeypadButton(text = "C", type = ButtonType.Action, modifier = Modifier.weight(1f), onClick = onClearAll, testTag = "calc_btn_clear")
+            KeypadButton(text = "( )", type = ButtonType.Action, modifier = Modifier.weight(1f), onClick = onParenthesis, testTag = "calc_btn_parenthesis")
+            KeypadButton(text = "%", type = ButtonType.Action, modifier = Modifier.weight(1f), onClick = onPercent, testTag = "calc_btn_percent")
+            KeypadButton(text = "÷", type = ButtonType.Operator, modifier = Modifier.weight(1f), onClick = { onOperator("÷") }, testTag = "calc_btn_div")
         }
 
         // Row 2: 7, 8, 9, ×
@@ -501,39 +491,15 @@ private fun StandardKeypad(
             KeypadButton(text = "+", type = ButtonType.Operator, modifier = Modifier.weight(1f), onClick = { onOperator("+") }, testTag = "calc_btn_add")
         }
 
-        // Row 5: +/-, 0, ., = (or backspace)
+        // Row 5: +/−, 0, ., =
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(spacing)
         ) {
-            KeypadButton(
-                text = "+/−",
-                type = ButtonType.Number,
-                modifier = Modifier.weight(1f),
-                onClick = onToggleSign,
-                testTag = "calc_btn_sign"
-            )
-            KeypadButton(
-                text = "0",
-                type = ButtonType.Number,
-                modifier = Modifier.weight(1f),
-                onClick = { onDigit("0") },
-                testTag = "calc_btn_0"
-            )
-            KeypadButton(
-                text = ".",
-                type = ButtonType.Number,
-                modifier = Modifier.weight(1f),
-                onClick = onDecimal,
-                testTag = "calc_btn_dot"
-            )
-            KeypadButton(
-                text = "=",
-                type = ButtonType.Equals,
-                modifier = Modifier.weight(1f),
-                onClick = onEquals,
-                testTag = "calc_btn_equals"
-            )
+            KeypadButton(text = "+/−", type = ButtonType.Number, modifier = Modifier.weight(1f), onClick = onToggleSign, testTag = "calc_btn_sign")
+            KeypadButton(text = "0", type = ButtonType.Number, modifier = Modifier.weight(1f), onClick = { onDigit("0") }, testTag = "calc_btn_0")
+            KeypadButton(text = ".", type = ButtonType.Number, modifier = Modifier.weight(1f), onClick = onDecimal, testTag = "calc_btn_dot")
+            KeypadButton(text = "=", type = ButtonType.Equals, modifier = Modifier.weight(1f), onClick = onEquals, testTag = "calc_btn_equals")
         }
     }
 }
@@ -547,15 +513,14 @@ private fun KeypadButton(
     text: String,
     type: ButtonType,
     modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
     onClick: () -> Unit,
     testTag: String
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.92f else 1.0f,
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
+        targetValue = if (isPressed) 0.90f else 1.0f,
+        animationSpec = spring(dampingRatio = 0.65f, stiffness = 500f),
         label = "btn_scale_$text"
     )
 
@@ -569,37 +534,29 @@ private fun KeypadButton(
     val contentColor = when (type) {
         ButtonType.Number -> MaterialTheme.colorScheme.onSurface
         ButtonType.Action -> MaterialTheme.colorScheme.onSurfaceVariant
-        ButtonType.Operator -> MaterialTheme.colorScheme.onPrimary
-        ButtonType.Equals -> MaterialTheme.colorScheme.onSecondary
+        ButtonType.Operator -> Color.White
+        ButtonType.Equals -> Color.White
     }
 
     Surface(
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(24.dp),
         color = containerColor,
-        tonalElevation = if (type == ButtonType.Number) 2.dp else 0.dp,
+        tonalElevation = if (type == ButtonType.Number) 3.dp else 0.dp,
+        shadowElevation = if (type == ButtonType.Equals || type == ButtonType.Operator) 4.dp else 1.dp,
         modifier = modifier
             .height(68.dp)
             .scale(scale)
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(24.dp))
             .clickable(interactionSource = interactionSource, indication = ripple()) { onClick() }
             .testTag(testTag)
     ) {
         Box(contentAlignment = Alignment.Center) {
-            if (icon != null) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = text,
-                    tint = contentColor,
-                    modifier = Modifier.size(24.dp)
-                )
-            } else {
-                Text(
-                    text = text,
-                    fontSize = if (text.length > 2) 20.sp else 26.sp,
-                    fontWeight = if (type == ButtonType.Number) FontWeight.Normal else FontWeight.SemiBold,
-                    color = contentColor
-                )
-            }
+            Text(
+                text = text,
+                fontSize = if (text.length > 2) 20.sp else 28.sp,
+                fontWeight = if (type == ButtonType.Number) FontWeight.Normal else FontWeight.Bold,
+                color = contentColor
+            )
         }
     }
 }
