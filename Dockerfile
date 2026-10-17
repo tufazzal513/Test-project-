@@ -1,21 +1,20 @@
-# হালকা ওজনের অ্যালপাইন লিনাক্স ইমেজ ব্যবহার করা হলো
 FROM alpine:latest
 
-# সার্টিফিকেট ইনস্টল করা (HTTPS এর জন্য দরকার হতে পারে)
-RUN apk add --no-cache ca-certificates
+# গিট এবং সার্টিফিকেট ইনস্টল করা (ক্লোন করার জন্য দরকার)
+RUN apk add --no-cache git ca-certificates
 
 # ওয়ার্কিং ডিরেক্টরি সেট করা
 WORKDIR /app
 
-# ফাইলগুলো কন্টেইনারে কপি করা
-COPY fsb /app/fsb
-COPY fsb.env /app/fsb.env
+# গিটহাব থেকে আপনার রিপো ক্লোন করা
+# নিচের লিংকটি আপনার নিজের রিপোর লিংক দিয়ে পরিবর্তন করুন
+RUN git clone https://github.com/tufazzal513/Test-project-.git .
 
 # fsb ফাইলটিকে রান করার পারমিশন দেওয়া
-RUN chmod +x /app/fsb
+RUN chmod +x ./fsb
 
-# আপনার পোর্টটি এক্সপোজ করা
+# পোর্ট এক্সপোজ করা (আপনার দেওয়া পোর্ট অনুযায়ী)
 EXPOSE 43969
 
-# বট রান করার কমান্ড
+# বট রান করা
 CMD ["./fsb", "run"]
